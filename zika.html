@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Editor Gráfico</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background-color: #f0f0f0;
+  }
+
+  #canvas-container {
+    text-align: center;
+  }
+
+  #canvas {
+    border: 2px solid #000;
+    background-color: #fff;
+    cursor: crosshair;
+  }
+
+  form {
+    text-align: center;
+    margin-top: 20px;
+  }
+
+  label {
+    margin-right: 10px;
+  }
+
+  input[type="color"],
+  input[type="range"],
+  select,
+  button {
+    margin: 5px;
+    padding: 5px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    background-color: #fff;
+  }
+
+  input[type="checkbox"] {
+    vertical-align: middle;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  #image-upload {
+    display: none;
+  }
+
+  #image-upload-label {
+    cursor: pointer;
+    color: #3366cc;
+    text-decoration: underline;
+  }
+</style>
+</head>
+<body>
+
+<div id="canvas-container">
+  <canvas id="canvas"></canvas>
+</div>
+
+<form>
+  <label for="color-picker">Cor:</label>
+  <input type="color" id="color-picker" value="#000000">
+  <label for="line-width">Espessura da Linha:</label>
+  <input type="range" id="line-width" value="2" min="1" max="20">
+  <label for="line-type">Tipo de Linha:</label>
+  <select id="line-type">
+    <option value="line">Linha Reta</option>
+    <option value="curve">Curva</option>
+  </select>
+  <label for="eraser">Borracha:</label>
+  <input type="checkbox" id="eraser">
+  <button id="clear-canvas">Limpar</button>
+  <button id="save-image">Salvar Imagem</button>
+  <label id="image-upload-label" for="image-upload">Carregar Imagem</label>
+  <input type="file" id="image-upload" accept="image/*">
+</form>
+
+<script>
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  let isDrawing = false;
+  let lastX = 0;
+  let lastY = 0;
+  let color = '#000000';
+  let lineWidth = 2;
+  let lineType = 'line';
+  let eraserMode = false;
+
+  canvas.addEventListener('mousedown', startDrawing);
+  canvas.addEventListener('mousemove', draw);
+  canvas.addEventListener('mouseup', endDrawing);
+  canvas.addEventListener('mouseout', endDrawing);
+
+  document.getElementById('color-picker').addEventListener('change', function() {
+    color = this.value;
+  });
+
+  document.getElementById('line-width').addEventListener('input', function() {
+    lineWidth = this.value;
+  });
+
+  document.getElementById('line-type').addEventListener('change', function() {
+    lineType = this.value;
+  });
+
+  document.getElementById('eraser').addEventListener('change', function() {
+    eraserMode = this.checked;
+    if (eraserMode) {
+      color = '#FFFFFF';
+    } else {
+      color = document.getElementById('color-picker').value;
+    }
+  });
+
+  document.getElementById('save-image').addEventListener('click', function() {
+    const image = canvas.toDataURL('image/png').replace('image/png', 'image/octet-stream');
+    const link = document.createElement('a');
+    link.href = image;
+    link.download = 'drawing.png';
+    link.click();
+  });
+
+  document.getElementById('clear-canvas').addEventListener('click', function() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  });
+
+  document.getElementById('image-upload').addEventListener('change', function(event) {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+          canvas.width = img.width;
+          canvas.height = img.height;
+          ctx.drawImage(img, 0, 0, img.width, img.height);
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+
+  function startDrawing(event) {
+    isDrawing = true;
+    [lastX, lastY] = [event.offsetX, event.offsetY];
+  }
+
+  function draw(event) {
+    if (!isDrawing) return;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lineWidth;
+
+    if (eraserMode) {
+      ctx.globalCompositeOperation = 'destination-out';
+    } else {
+      ctx.globalCompositeOperation = 'source-over';
+    }
+
+    if (lineType === 'line') {
+      ctx.beginPath();
+      ctx.moveTo(lastX, lastY);
+      ctx.lineTo(event.offsetX, event.offsetY);
+      ctx.stroke();
+      [lastX, lastY] = [event.offsetX, event.offsetY];
+    } else if (lineType === 'curve') {
+      ctx.quadraticCurveTo(lastX, lastY, event.offsetX, event.offsetY);
+      ctx.stroke();
+      [lastX, lastY] = [event.offsetX, event.offsetY];
+    }
+  }
+
+  function endDrawing() {
+    isDrawing = false;
+  }
+</script>
+
+</body>
+</html>
